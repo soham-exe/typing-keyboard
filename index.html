@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Speed Typer</title>
+<style>
+  /* --- Color Variables --- */
+  :root {
+    --bg-body: rgb(55, 127, 143);
+    
+    --key-top: rgb(255, 255, 238);
+    --key-side: rgb(229, 229, 199);
+    --key-border: rgb(36, 38, 34);
+    --key-text: rgb(36, 38, 34);
+    --key-shadow: rgb(140, 140, 140);
+    
+    --display-bg: rgb(255, 255, 238);
+    --text-faint: rgba(36, 38, 34, 0.4); 
+    --text-correct: rgb(36, 38, 34);     
+    --text-wrong: #e74c3c;               
+    --cursor-color: rgb(36, 38, 34);
+    
+    --toggle-bg: #fff;
+    --toggle-circle: rgb(55, 127, 143);
+    --label-text: #fff;
+
+    --slider-track: rgba(0, 0, 0, 0.2);
+    --slider-thumb: #fff;
+  }
+
+  body.dark-mode {
+    --bg-body: #172b33;
+    --key-top: #266e80;
+    --key-side: #2c4f5d;
+    --key-border: #000;
+    --key-text: #eee;
+    --key-shadow: #000000;
+    
+    --display-bg: #2a5261;
+    --text-faint: rgba(255, 255, 255, 0.3); 
+    --text-correct: #fff;                   
+    --text-wrong: #ff6b6b;
+    --cursor-color: #fff;
+
+    --toggle-bg: #444;
+    --toggle-circle: #eee;
+    --label-text: #ccc;
+    --slider-track: rgba(255, 255, 255, 0.2);
+    --slider-thumb: #eee;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    background: var(--bg-body);
+    font-family: 'Poppins', sans-serif;
+    transition: background 0.3s ease;
+  }
+
+  /* --- Control Panel --- */
+  .control-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-end;
+    z-index: 100;
+    background: rgba(0,0,0,0.15);
+    padding: 15px;
+    border-radius: 12px;
+    backdrop-filter: blur(4px);
+  }
+
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 15px;
+  }
+
+  .control-label {
+    color: var(--label-text);
+    font-size: 13px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    user-select: none;
+    min-width: 50px;
+  }
+
+  .timer-display {
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--key-top);
+    background: var(--bg-body);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--key-border);
+    width: 40px;
+    text-align: center;
+  }
+
+  .timer-input {
+    width: 50px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid var(--key-border);
+    color: var(--label-text);
+    padding: 2px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .reset-btn {
+    background: var(--key-top);
+    border: 2px solid var(--key-border);
+    color: var(--key-text);
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+    width: 100%;
+    box-shadow: 0 3px 0 var(--key-side);
+  }
+  .reset-btn:active { transform: translateY(3px); box-shadow: none; }
+
+  /* Switches & Sliders */
+  .switch { display: inline-block; height: 24px; position: relative; width: 45px; }
+  .switch input { display: none; }
+  .slider-switch {
+    background-color: var(--toggle-bg); bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0;
+    transition: .4s; border-radius: 34px; border: 2px solid var(--key-border);
+  }
+  .slider-switch:before {
+    background-color: var(--toggle-circle); bottom: 2px; content: ""; height: 16px; left: 3px; position: absolute;
+    transition: .4s; width: 16px; border-radius: 50%;
+  }
+  input:checked + .slider-switch { background-color: var(--key-top); }
+  input:checked + .slider-switch:before { transform: translateX(20px); }
+
+  input[type=range] {
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    width: 90px; background: transparent; 
+  }
+  input[type=range]:focus { outline: none; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+    background: var(--slider-thumb); border: 2px solid var(--key-border); cursor: pointer; margin-top: -6px;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    width: 100%; height: 4px; cursor: pointer; background: var(--slider-track); border-radius: 2px;
+  }
+
+  /* --- Display Area --- */
+  #display-container {
+    width: 90%;
+    max-width: 700px;
+    min-height: 120px;
+    margin-bottom: 40px;
+    background: var(--display-bg);
+    padding: 25px;
+    border-radius: 7mm;
+    outline: 3px solid var(--key-border);
+    box-shadow: 10px 10px 0px rgba(0,0,0,0.2);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 24px;
+    line-height: 1.6;
+    position: relative;
+    cursor: text;
+    user-select: none;
+    transition: background 0.3s;
+  }
+  
+  #display-container.loading { opacity: 0.6; pointer-events: none; }
+
+  .char { color: var(--text-faint); font-weight: normal; }
+  .char.correct { color: var(--text-correct); font-weight: bold; }
+  .char.wrong { color: var(--text-wrong); text-decoration: underline; }
+  .char.current { border-bottom: 3px solid var(--cursor-color); animation: blink 1s infinite; }
+
+  @keyframes blink { 50% { border-color: transparent; } }
+
+  /* Results Overlay */
+  #result-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--key-top);
+    padding: 30px;
+    border-radius: 15px;
+    border: 3px solid var(--key-border);
+    text-align: center;
+    color: var(--key-text);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none; 
+    z-index: 200;
+  }
+  #result-overlay h2 { margin: 0 0 10px 0; }
+  #result-overlay .stats { font-size: 30px; font-weight: bold; margin: 15px 0; }
+  #result-overlay button {
+    background: var(--bg-body); color: white; border: none; padding: 10px 20px;
+    border-radius: 5px; cursor: pointer; font-size: 16px;
+  }
+
+  /* --- Keyboard --- */
+  .keyboard {
+    display: flex; flex-direction: column; gap: 15px; width: 95%; max-width: 850px; padding: 10px;
+  }
+  .row { display: flex; gap: 8px; justify-content: center; height: 60px; }
+
+  .key {
+    flex: 1; min-width: 40px; height: 50px;
+    position: relative; background: none; outline: none; border: none;
+    padding: 0; margin: 0; cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .key .top {
+    width: 100%; height: 100%; background: var(--key-top);
+    font-family: poppins, sans-serif; font-size: 18px; font-weight: bold;
+    color: var(--key-text); display: flex; align-items: center; justify-content: center;
+    border-radius: 7mm; outline: 2px solid var(--key-border);
+    transition: transform 0.2s, background 0.3s, color 0.3s;
+    position: relative; overflow: hidden; z-index: 2;
+  }
+  .key .bottom {
+    position: absolute; width: 100%; height: 100%; background: var(--key-side);
+    top: 10px; left: 0; border-radius: 7mm; outline: 2px solid var(--key-border);
+    z-index: 0; transition: background 0.3s;
+  }/* Button side details (optional)
+  .key .bottom::before, .key .bottom::after {
+    position: absolute; content: ""; width: 1px; height: 10px;
+    background: var(--key-border); bottom: 4px; transition: left 0.3s; 
+  }*/
+  .key .bottom::before { left: 15%; } .key .bottom::after { left: 85%; }
+  .key:active .top, .key.active .top { transform: translateY(10px); }
+  .key.caps-active .top { transform: translateY(10px); background: var(--key-side); filter: brightness(1.1); }
+  .key::before {
+    position: absolute; content: ""; width: calc(100% + 2px); height: 100%;
+    background: var(--key-shadow); top: 14px; left: -1px; border-radius: 7mm;
+    outline: 2px solid var(--key-border); z-index: -1; transition: background 0.3s;
+  }
+  .key .top::before {
+    position: absolute; content: ""; width: 15px; height: 100%;
+    background: rgba(255, 255, 255, 0.1); transform: skewX(30deg); left: -20px; transition: 0.25s;
+  }
+  .key:active .top::before, .key.active .top::before { left: calc(100% + 20px); }
+  .key.wide { flex: 1.5; } .key.space { flex: 4; } .key.enter { flex: 2; }
+  
+  @media (max-width: 600px) {
+    .key .top { font-size: 14px; border-radius: 4mm; }
+    .key .bottom, .key::before { border-radius: 4mm; }
+    #display-container { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="result-overlay">
+  <h2>Time's Up!</h2>
+  <div class="stats" id="wpm-result">0 WPM</div>
+  <p id="accuracy-result">Accuracy: 100%</p>
+  <button onclick="resetGame()">Try Again</button>
+</div>
+
+<div class="control-panel">
+  <div class="control-row">
+    <span class="control-label">Theme</span>
+    <label class="switch">
+      <input type="checkbox" id="theme-toggle" />
+      <div class="slider-switch"></div>
+    </label>
+  </div>
+  
+  <div class="control-row">
+    <span class="control-label">Vol</span>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
+  </div>
+
+  <div class="control-row">
+    <span class="control-label">Time</span>
+    <div id="timer-display" class="timer-display">60</div>
+  </div>
+  
+  <div class="control-row">
+    <span class="control-label">Set</span>
+    <input type="number" id="time-input" class="timer-input" value="60" min="10" max="300">
+  </div>
+
+  <button class="reset-btn" onclick="resetGame()">↻ NEW TEST</button>
+</div>
+
+<div id="display-container"></div>
+
+<div class="keyboard">
+  <div class="row">
+    <button class="key" data-key="1"><span class="top">1</span><span class="bottom"></span></button>
+    <button class="key" data-key="2"><span class="top">2</span><span class="bottom"></span></button>
+    <button class="key" data-key="3"><span class="top">3</span><span class="bottom"></span></button>
+    <button class="key" data-key="4"><span class="top">4</span><span class="bottom"></span></button>
+    <button class="key" data-key="5"><span class="top">5</span><span class="bottom"></span></button>
+    <button class="key" data-key="6"><span class="top">6</span><span class="bottom"></span></button>
+    <button class="key" data-key="7"><span class="top">7</span><span class="bottom"></span></button>
+    <button class="key" data-key="8"><span class="top">8</span><span class="bottom"></span></button>
+    <button class="key" data-key="9"><span class="top">9</span><span class="bottom"></span></button>
+    <button class="key" data-key="0"><span class="top">0</span><span class="bottom"></span></button>
+  </div>
+  
+  <div class="row">
+    <button class="key" data-key="q"><span class="top">Q</span><span class="bottom"></span></button>
+    <button class="key" data-key="w"><span class="top">W</span><span class="bottom"></span></button>
+    <button class="key" data-key="e"><span class="top">E</span><span class="bottom"></span></button>
+    <button class="key" data-key="r"><span class="top">R</span><span class="bottom"></span></button>
+    <button class="key" data-key="t"><span class="top">T</span><span class="bottom"></span></button>
+    <button class="key" data-key="y"><span class="top">Y</span><span class="bottom"></span></button>
+    <button class="key" data-key="u"><span class="top">U</span><span class="bottom"></span></button>
+    <button class="key" data-key="i"><span class="top">I</span><span class="bottom"></span></button>
+    <button class="key" data-key="o"><span class="top">O</span><span class="bottom"></span></button>
+    <button class="key" data-key="p"><span class="top">P</span><span class="bottom"></span></button>
+  </div>
+  <div class="row">
+    <button class="key wide" id="caps-btn"><span class="top">Caps</span><span class="bottom"></span></button>
+    <button class="key" data-key="a"><span class="top">A</span><span class="bottom"></span></button>
+    <button class="key" data-key="s"><span class="top">S</span><span class="bottom"></span></button>
+    <button class="key" data-key="d"><span class="top">D</span><span class="bottom"></span></button>
+    <button class="key" data-key="f"><span class="top">F</span><span class="bottom"></span></button>
+    <button class="key" data-key="g"><span class="top">G</span><span class="bottom"></span></button>
+    <button class="key" data-key="h"><span class="top">H</span><span class="bottom"></span></button>
+    <button class="key" data-key="j"><span class="top">J</span><span class="bottom"></span></button>
+    <button class="key" data-key="k"><span class="top">K</span><span class="bottom"></span></button>
+    <button class="key" data-key="l"><span class="top">L</span><span class="bottom"></span></button>
+    <button class="key wide" id="enter-btn"><span class="top">↵</span><span class="bottom"></span></button>
+  </div>
+  <div class="row">
+    <button class="key" data-key="z"><span class="top">Z</span><span class="bottom"></span></button>
+    <button class="key" data-key="x"><span class="top">X</span><span class="bottom"></span></button>
+    <button class="key" data-key="c"><span class="top">C</span><span class="bottom"></span></button>
+    <button class="key" data-key="v"><span class="top">V</span><span class="bottom"></span></button>
+    <button class="key" data-key="b"><span class="top">B</span><span class="bottom"></span></button>
+    <button class="key" data-key="n"><span class="top">N</span><span class="bottom"></span></button>
+    <button class="key" data-key="m"><span class="top">M</span><span class="bottom"></span></button>
+    <button class="key wide" id="backspace-btn"><span class="top">⌫</span><span class="bottom"></span></button>
+  </div>
+  <div class="row">
+    <button class="key space" id="space-btn"><span class="top">Space</span><span class="bottom"></span></button>
+  </div>
+</div>
+
+<script>
+  // --- UI Elements ---
+  const displayContainer = document.getElementById('display-container');
+  const timerDisplay = document.getElementById('timer-display');
+  const timeInput = document.getElementById('time-input');
+  const resultOverlay = document.getElementById('result-overlay');
+  const wpmResult = document.getElementById('wpm-result');
+  const accResult = document.getElementById('accuracy-result');
+  
+  // --- Controls ---
+  const volumeSlider = document.getElementById('volume-slider');
+  const themeToggle = document.getElementById('theme-toggle');
+  
+  // --- Keys ---
+  const capsBtn = document.getElementById('caps-btn');
+  const backspaceBtn = document.getElementById('backspace-btn');
+  const spaceBtn = document.getElementById('space-btn');
+  const enterBtn = document.getElementById('enter-btn');
+  const allKeys = document.querySelectorAll('.key');
+
+  // --- Audio ---                                                      // modern click sounds
+  const clickSound = new Audio('click2.wav'); 
+  const enterSound = new Audio('click2.wav'); 
+  const spaceSound = new Audio('click2.wav'); 
+  const finishSound = new Audio('finish1.wav');
+/*
+  const clickSound = new Audio('click1.wav');                               // mechanical keyboard sounds
+  const enterSound = new Audio('click1.wav'); 
+  const spaceSound = new Audio('click1.wav'); 
+  const finishSound = new Audio('finish1.wav');
+
+  const clickSound = new Audio('click.wav');                          // typewriter sounds          
+  const enterSound = new Audio('click.wav'); 
+  const spaceSound = new Audio('click.wav'); 
+  const finishSound = new Audio('finish1.wav');*/
+  
+  let currentVolume = 0.5;
+
+// --- Fallback Data ---
+  const fallbackQuotes = [
+    "You can't connect the dots looking forward; you can only connect them looking backwards. So you have to trust that the dots will somehow connect in your future. You have to trust in something: your gut, destiny, life, karma, whatever.",
+    "Look again at that dot. That's here. That's home. That's us. On it everyone you love, everyone you know, everyone you ever heard of, every human being who ever was, lived out their lives. The aggregate of our joy and suffering.",
+    "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment. For every minute you are angry you lose sixty seconds of happiness. Finsh each day and be done with it.",
+    "Premature optimization is the root of all evil (or at least most of it) in programming. We should forget about small efficiencies, say about 97% of the time: premature optimization is the root of all evil.",
+    "Success is not final, failure is not fatal: it is the courage to continue that counts. If you are going through hell, keep going. Never, never, never give up. Attitude is a little thing that makes a big difference.",
+    "The best and most beautiful things in the world cannot be seen or even touched - they must be felt with the heart. Keep your face always toward the sunshine and shadows will fall behind you.",
+    "Your time is limited, so don't waste it living someone else's life. Don't be trapped by dogma, which is living with the results of other people's thinking. Don't let the noise of others' opinions drown out your own inner voice.",
+    "I've learned that people will forget what you said, people will forget what you did, but people will never forget how you made them feel. Try to be a rainbow in someone else's cloud. Nothing can dim the light which shines from within.",
+    "Twenty years from now you will be more disappointed by the things that you didn't do than by the ones you did do. So throw off the bowlines. Sail away from the safe harbor. Catch the trade winds in your sails. Explore. Dream. Discover.",
+    "Character cannot be developed in ease and quiet. Only through experience of trial and suffering can the soul be strengthened, ambition inspired, and success achieved. We could never learn to be brave and patient if there were only joy in the world.",
+    "Do not go where the path may lead, go instead where there is no path and leave a trail. What lies behind us and what lies before us are tiny matters compared to what lies within us. The only person you are destined to become is the person you decide to be.",
+    "Imagination is more important than knowledge. For knowledge is limited, whereas imagination embraces the entire world, stimulating progress, giving birth to evolution. It is the preview of life's coming attractions.",
+    "It is not the critic who counts; not the man who points out how the strong man stumbles, or where the doer of deeds could have done them better. The credit belongs to the man who is actually in the arena, whose face is marred by dust and sweat and blood."];
+  
+  // --- Game State ---
+  let currentQuote = "";
+  let currentIndex = 0;
+  let timer = 60;
+  let initialTime = 60;
+  let interval = null;
+  let isRunning = false;
+  let isCaps = false;
+  let isFetching = false;
+  
+  // Stats
+  let correctKeystrokes = 0;
+  let totalKeystrokes = 0;
+
+  // --- Initialization ---
+  function init() {
+    timeInput.addEventListener('change', () => {
+      initialTime = parseInt(timeInput.value);
+      resetGame();
+    });
+    resetGame();
+  }
+
+  function resetGame() {
+    clearInterval(interval);
+    interval = null;
+    isRunning = false;
+    currentIndex = 0;
+    correctKeystrokes = 0;
+    totalKeystrokes = 0;
+    timer = initialTime;
+    timerDisplay.innerText = timer;
+    resultOverlay.style.display = 'none';
+
+    loadNewQuote();
+  }
+
+  // --- Wikipedia Fetch Logic (English Only & Clean) ---
+  async function getWikiText() {
+    const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=random&grnnamespace=0&prop=extracts&exintro&explaintext&exchars=200";
+    
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      const pages = data.query.pages;
+      const pageId = Object.keys(pages)[0];
+      let text = pages[pageId].extract;
+
+      // 1. Remove text inside parentheses (e.g., translations, birth dates)
+      text = text.replace(/ \(.*?\)/g, '');
+
+      // 2. Remove any remaining non-English characters (safety net)
+      text = text.replace(/[^\x00-\x7F]/g, "");
+
+      // 3. Cleanup: Remove newlines and excess spaces
+      text = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+      // 4. Remove trailing "..."
+      if (text.endsWith("...")) {
+          text = text.substring(0, text.length - 3);
+      }
+
+      // 5. Hard Limit: Cut at the last full stop
+      const lastPeriod = text.lastIndexOf('.');
+      if (lastPeriod !== -1) {
+          text = text.substring(0, lastPeriod + 1);
+      }
+
+      // 6. Final safety check: if text is too short after cleaning, try again
+      if (text.length < 50) {
+         throw new Error("Text too short/messy");
+      }
+      
+      return text;
+    } catch (error) {
+      console.log("Wiki Fetch Failed (or text was messy), using fallback");
+      return fallbackQuotes[Math.floor(Math.random() * fallbackQuotes.length)];
+    }
+  }
+
+  async function loadNewQuote() {
+     if (isFetching) return;
+     isFetching = true;
+     
+     displayContainer.classList.add('loading');
+     displayContainer.innerHTML = '<span class="char">Fetching article...</span>';
+     
+     currentQuote = await getWikiText();
+     
+     isFetching = false;
+     displayContainer.classList.remove('loading');
+     renderQuote();
+  }
+
+  function renderQuote() {
+    displayContainer.innerHTML = '';
+    currentQuote.split('').forEach((char, index) => {
+      const span = document.createElement('span');
+      span.innerText = char;
+      span.classList.add('char');
+      if (index === 0) span.classList.add('current');
+      displayContainer.appendChild(span);
+    });
+  }
+
+  function startTimer() {
+    if (isRunning) return;
+    isRunning = true;
+    interval = setInterval(() => {
+      timer--;
+      timerDisplay.innerText = timer;
+      if (timer <= 0) {
+        endGame();
+      }
+    }, 1000);
+  }
+
+function endGame() {
+    clearInterval(interval);
+    isRunning = false;
+    
+    // Play the finish sound!
+    playAudio('finish'); 
+
+    const timeElapsedInMinutes = (initialTime - timer) / 60;
+    const validTime = timeElapsedInMinutes > 0 ? timeElapsedInMinutes : 1/60; 
+    const grossWPM = Math.round((correctKeystrokes / 5) / validTime); 
+    const accuracy = totalKeystrokes === 0 ? 0 : Math.round((correctKeystrokes / totalKeystrokes) * 100);
+
+    wpmResult.innerText = `${grossWPM} WPM`;
+    accResult.innerText = `Accuracy: ${accuracy}%`;
+    resultOverlay.style.display = 'block';
+  }
+
+  // --- Input Logic ---
+  function handleInput(key) {
+    if (timer <= 0 || isFetching) return; 
+
+    if (!isRunning) startTimer();
+
+    const spans = displayContainer.querySelectorAll('span');
+    const expectedChar = currentQuote[currentIndex];
+
+    // Backspace
+    if (key === 'Backspace') {
+      if (currentIndex > 0) {
+        spans[currentIndex].classList.remove('current'); 
+        currentIndex--;
+        spans[currentIndex].classList.remove('correct', 'wrong'); 
+        spans[currentIndex].classList.add('current'); 
+      }
+      playAudio('click');
+      return;
+    }
+
+    if (key.length > 1 && key !== 'Enter') return; 
+
+    totalKeystrokes++;
+    const typedChar = isCaps ? key.toUpperCase() : key;
+    
+    spans[currentIndex].classList.remove('current');
+
+    if (typedChar === expectedChar) {
+      spans[currentIndex].classList.add('correct');
+      correctKeystrokes++;
+    } else {
+      spans[currentIndex].classList.add('wrong');
+    }
+
+    // Audio
+    if (key === ' ') playAudio('space');
+    else if (key === 'Enter') playAudio('enter');
+    else playAudio('click');
+
+    currentIndex++;
+    
+    if (currentIndex < spans.length) {
+      spans[currentIndex].classList.add('current'); 
+    } else {
+      // Instant Load Next
+      currentIndex = 0;
+      loadNewQuote();
+    }
+  }
+
+  // --- Audio ---
+function playAudio(type) {
+    if (currentVolume == 0) return;
+    
+    let sound = clickSound; // Default
+    
+    if (type === 'enter') sound = enterSound;
+    else if (type === 'space') sound = spaceSound;
+    else if (type === 'finish') sound = finishSound; // <--- NEW CHECK
+
+    sound.volume = currentVolume;
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  }
+
+  // --- Event Listeners ---
+  volumeSlider.addEventListener('input', (e) => currentVolume = e.target.value);
+  themeToggle.addEventListener('change', (e) => document.body.classList.toggle('dark-mode', e.target.checked));
+
+  // Physical Keyboard
+  document.addEventListener('keydown', (e) => {
+    const key = e.key;
+    let keyEl = document.querySelector(`.key[data-key="${key.toLowerCase()}"]`);
+    if (key === ' ') keyEl = spaceBtn;
+    if (key === 'Backspace') keyEl = backspaceBtn;
+    if (key === 'Enter') keyEl = enterBtn;
+    if (key === 'CapsLock') keyEl = capsBtn;
+    if (keyEl) keyEl.classList.add('active');
+
+    if (key === 'CapsLock') {
+       isCaps = !isCaps; 
+       capsBtn.classList.toggle('caps-active', isCaps);
+       return;
+    }
+    if (key === ' ') e.preventDefault();
+    handleInput(key);
+  });
+
+  document.addEventListener('keyup', (e) => {
+    const key = e.key;
+    let keyEl = document.querySelector(`.key[data-key="${key.toLowerCase()}"]`);
+    if (key === ' ') keyEl = spaceBtn;
+    if (key === 'Backspace') keyEl = backspaceBtn;
+    if (key === 'Enter') keyEl = enterBtn;
+    if (key === 'CapsLock') keyEl = capsBtn;
+    if (keyEl) keyEl.classList.remove('active');
+  });
+
+  // Virtual Keyboard
+  allKeys.forEach(btn => {
+    btn.addEventListener('click', () => {
+      let key = btn.getAttribute('data-key');
+      if (btn.id === 'space-btn') key = ' ';
+      if (btn.id === 'backspace-btn') key = 'Backspace';
+      if (btn.id === 'enter-btn') key = 'Enter';
+      
+      if (btn.id === 'caps-btn') {
+        isCaps = !isCaps;
+        capsBtn.classList.toggle('caps-active', isCaps);
+        playAudio('click');
+        return;
+      }
+      if (key) handleInput(key);
+    });
+  });
+
+  // Start Game
+  init();
+
+</script>
+</body>
+</html>
