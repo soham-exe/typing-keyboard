@@ -4,6 +4,9 @@
 This project is a feature-rich, web-based typing speed test application that provides an engaging and customizable environment for practicing typing skills. It combines visual flair (3D buttons and Dark Mode) with dynamic content fetched live from the internet.
 
 ---
+## Check it out here:
+🎮[Typing Game](https://soham-exe.github.io/typing-keyboard/)
+---
 
 ## ✨ Key Features
 
@@ -55,4 +58,4 @@ This project is perfectly suited for free hosting via GitHub Pages.
     ```
 2.  **Push to GitHub:** Create a new repository on GitHub and push your local files to the remote repository.
 3.  **Activate Pages:** In your repository on GitHub, go to **Settings > Pages**. Select your main branch (`master` or `main`) as the deployment source and save.
-4.  Your site will be live at `[https://<YOUR-USERNAME>.github.io/<REPO-NAME>/](https://soham-exe.github.io/typing-keyboard/)` within minutes.
+4.  Your site will be live at `[https://<YOUR-USERNAME>.github.io/<REPO-NAME>/]` within minutes.
